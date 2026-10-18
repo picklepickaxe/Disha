@@ -72,13 +72,20 @@ p{margin:0 0 .8rem}.mut{color:var(--mut);font-size:1rem}
 .road li{position:relative;margin:0 0 1.2rem;padding-left:1.3rem;font-weight:700}
 .road li::before{content:attr(data-n);position:absolute;left:-2.35rem;top:-.1rem;width:2.1rem;height:2.1rem;border-radius:50%;background:var(--sun);color:#1a100d;border:3px solid var(--ink);display:grid;place-items:center;font:800 1rem Mukta}
 nav{position:fixed;left:0;right:0;bottom:0;z-index:6;display:flex;background:var(--bg);border-top:3px solid var(--ink);padding-bottom:env(safe-area-inset-bottom,0px)}
-nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:.1rem;padding:.5rem .1rem;font:800 .8rem Mukta;color:var(--mut);background:none;border:0;cursor:pointer}
+nav{overflow-x:auto;justify-content:flex-start}
+nav button{flex:0 0 12.5%;min-width:76px;display:flex;flex-direction:column;align-items:center;gap:.1rem;padding:.5rem .1rem;font:800 .8rem Mukta;color:var(--mut);background:none;border:0;cursor:pointer}
 nav button[aria-current=page]{color:#fff;background:var(--red)}
 input,select{font:700 1.1rem Mukta;width:100%;padding:.7rem;border:3px solid var(--ink);border-radius:6px;background:var(--card);color:var(--ink);margin:0 0 .7rem}
+textarea{font:700 1.1rem Mukta;width:100%;padding:.7rem;border:3px solid var(--ink);border-radius:6px;background:var(--card);color:var(--ink);margin:0 0 .7rem}
 label{font-weight:800;display:block;margin-bottom:.2rem}
 table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:.5rem .3rem;border-bottom:2px solid var(--ink);font-size:1rem;vertical-align:middle}
 .scroll{overflow-x:auto}
 pre{background:#1a100d;color:#f3f3f0;padding:1rem;border-radius:6px;overflow-x:auto;font-size:.9rem;line-height:1.4}
+.askbox{display:grid;grid-template-columns:1fr auto;gap:.5rem}.askbox textarea{grid-column:1/-1;min-height:5rem}.askbox .b{align-self:start}
+.answer{border-left:5px solid var(--red);padding-left:.8rem;margin-top:.8rem}.source{display:inline-block;margin:.25rem .35rem .1rem 0}
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin:.8rem 0}.metric{background:var(--bg);border:2px solid var(--ink);padding:.6rem;border-radius:4px}.metric b{display:block;font-size:1.1rem}
+.progress{height:.8rem;background:var(--bg);border:2px solid var(--ink);margin:.35rem 0 .7rem}.progress i{display:block;height:100%;background:var(--red)}
+.content{white-space:pre-wrap;background:var(--bg);border:2px solid var(--ink);padding:.8rem;border-radius:4px}
 #toast{position:fixed;left:4vw;right:4vw;bottom:calc(5.5rem + env(safe-area-inset-bottom,0px));z-index:30;background:#1a100d;color:#f3f3f0;border:3px solid var(--sun);border-radius:6px;padding:.8rem 1rem;font-weight:800;display:none}
 :focus-visible{outline:4px solid var(--sun);outline-offset:2px}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -87,11 +94,14 @@ pre{background:#1a100d;color:#f3f3f0;padding:1rem;border-radius:6px;overflow-x:a
 <script>
 const $=s=>document.querySelector(s);
 let S={L:0,v:'home',q:0,p:{likes:[]},c:null,mode:'S',who:null,started:0,ob:0,mute:false,qu:[],mods:[],
-st:[{n:'Sunita (sample)',c:'tailor',f:1,r:0},{n:'Ravi (sample)',c:'elec',f:0,r:0},{n:'Pooja (sample)',c:'nurse',f:0,r:0}]};
+openModule:null,payTarget:null,paidModules:[],askQ:'',askResult:null,partners:[],opportunityInterests:[],missionState:'Punjab',pendingState:'',pendingResistance:'',
+st:[{n:'Sunita (sample)',c:'tailor',f:1,r:0,state:'Punjab',resistance:'cost'},{n:'Ravi (sample)',c:'elec',f:0,r:0,state:'Punjab',resistance:'safety'},{n:'Pooja (sample)',c:'nurse',f:0,r:0,state:'Haryana',resistance:'social'}]};
 try{const d=localStorage.getItem('disha');if(d)S=Object.assign(S,JSON.parse(d))}catch(e){}
 S.started=0;S.ob=0;S.v='home';S.who=null;
 const save=()=>{try{localStorage.setItem('disha',JSON.stringify(S))}catch(e){}};
 const T=a=>Array.isArray(a)?a[S.L]:a;
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const STATES=['Punjab','Haryana','Bihar','Rajasthan','Uttar Pradesh'];
 const P={wrench:'<path d="M14 6a4 4 0 0 0-5 5L3 17l4 4 6-6a4 4 0 0 0 5-5l-3 3-3-1-1-3z"/>',leaf:'<path d="M5 19c0-9 5-14 14-14 0 9-5 14-14 14zM5 19l8-8"/>',brush:'<path d="M4 20c3 0 5-1 5-4l9-9-3-3-9 9c-3 0-2 4-2 7z"/>',chat:'<path d="M4 5h16v11H9l-5 4z"/>',heart:'<path d="M12 20s-8-5-8-11a4.5 4.5 0 0 1 8-2 4.5 4.5 0 0 1 8 2c0 6-8 11-8 11z"/>',chip:'<path d="M7 7h10v10H7zM10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4"/>',mic:'<path d="M9 4h6v8a3 3 0 0 1-6 0zM5 11a7 7 0 0 0 14 0M12 18v3"/>',spk:'<path d="M4 9h4l5-4v14l-5-4H4zM16 9a4 4 0 0 1 0 6"/>',home:'<path d="M4 11l8-7 8 7v9H4z"/>',road:'<path d="M8 21L10 3M16 21L14 3M12 6v3M12 12v3"/>',star:'<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/>',fam:'<circle cx="8" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-4 2-6 5-6s5 2 5 6M14 20c0-3 1-5 3-5s4 2 4 5"/>',cap:'<path d="M2 9l10-5 10 5-10 5zM6 11v5c3 2 9 2 12 0v-5"/>',code:'<path d="M8 7l-5 5 5 5M16 7l5 5-5 5"/>',book:'<path d="M4 5h7v15H4zM13 5h7v15h-7z"/>'};
 const I=(n,s=26)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n]}</svg>`;
 const Q=[
@@ -145,6 +155,17 @@ const SC=[
 {n:['NAPS अप्रेंटिसशिप','NAPS apprenticeship'],d:['काम सीखते हुए वज़ीफ़ा मिलता है','Learn on the job and get a stipend'],t:()=>true,r:['14 साल से ऊपर, कंपनी में सीखो','14 or older, learn inside a company']},
 {n:['प्रगति स्कॉलरशिप (लड़कियाँ)','Pragati scholarship (girls)'],d:['तकनीकी डिप्लोमा या डिग्री में लड़कियों के लिए','For girls in technical diploma or degree'],t:(p,l)=>p.girl==='g'&&l>=1,r:['लड़कियों के लिए, 12वीं के बाद','For girls, after Class 12']},
 {n:['PM विश्वकर्मा','PM Vishwakarma'],d:['पारंपरिक हुनर वालों को टूलकिट और लोन','Toolkit and loan for traditional trades'],t:p=>p.likes.some(x=>['make','fix'].includes(x)),r:['हाथ के हुनर वालों के लिए','For hand-skill trades']}];
+const OPPS=[
+{id:'solar-apprentice',type:['अप्रेंटिसशिप','Apprenticeship'],title:['सोलर पीवी इंस्टॉलर प्रशिक्षु','Solar PV installer apprentice'],org:['जिला कौशल केंद्र · नमूना सूची','District Skill Centre · sample listing'],place:['पंजाब · लुधियाना','Punjab · Ludhiana'],detail:['NSDC प्रशिक्षण के साथ काम पर सीखना; स्टाइपेंड और तारीख नियोक्ता से पुष्टि करें।','Learn on the job alongside NSDC training; confirm stipend and dates with the employer.'],career:'elec'},
+{id:'farm-intern',type:['इंटर्नशिप','Internship'],title:['कृषि सेवा और ड्रोन इंटर्न','Farm services and drone intern'],org:['कृषि विज्ञान केंद्र · नमूना सूची','Krishi Vigyan Kendra · sample listing'],place:['पंजाब · पटियाला','Punjab · Patiala'],detail:['फसल सर्वेक्षण और किसान सहायता का 8-सप्ताह परिचय; उपलब्धता आयोजक से पुष्टि करें।','An 8-week introduction to crop surveys and farmer support; confirm availability with the host.'],career:'agri'},
+{id:'nursing-trainee',type:['इंटर्नशिप','Internship'],title:['अस्पताल सेवा प्रशिक्षु','Hospital care intern'],org:['सामुदायिक स्वास्थ्य केंद्र · नमूना सूची','Community Health Centre · sample listing'],place:['हरियाणा · अंबाला','Haryana · Ambala'],detail:['नर्सिंग स्टाफ के साथ पर्यवेक्षित परिचय; यह नौकरी या प्रवेश की गारंटी नहीं है।','A supervised introduction with nursing staff; this is not a job or admission guarantee.'],career:'nurse'}
+];
+const COURSES=[
+{id:'solar-safety',career:'elec',title:['सोलर काम में सुरक्षा','Solar work safety'],price:0,content:['सुरक्षा किट पहनें और काम शुरू करने से पहले बिजली का स्रोत बंद करें। उपकरण की जाँच करें, ऊँचाई पर अकेले काम न करें, और संदेह होने पर प्रशिक्षक को बुलाएँ।','Wear protective equipment and isolate the power source before work. Check tools, never work at height alone, and ask a trainer when unsure.']},
+{id:'tailoring-basics',career:'tailor',title:['सिलाई की बुनियाद','Tailoring foundations'],price:99,content:['नाप लेना, कपड़ा पहचानना और मशीन की जाँच करना सीखें। पहले नमूने पर सीधी सिलाई का अभ्यास करें। कीमत केवल डेमो है; यह पेज कोई वास्तविक भुगतान नहीं लेता।','Learn measuring, fabric selection and machine checks. Practice straight seams on scrap fabric first. The listed price is a demo; this page does not collect payment.']},
+{id:'digital-centre',career:'digi',title:['गाँव का डिजिटल सेवा केंद्र','Village digital service centre'],price:0,content:['CSC/VLE क्या करता है, नागरिकों की जानकारी कैसे सुरक्षित रखनी है, और सेवा देने से पहले आधिकारिक निर्देश कैसे जाँचने हैं—इन मूल बातों से शुरुआत करें।','Start with what a CSC/VLE does, how to protect residents’ information, and how to check official instructions before offering a service.']}
+];
+const RESISTANCE={cost:['खर्च','Cost'],safety:['सुरक्षा','Safety'],social:['समाज की राय','Social acceptance'],distance:['दूरी','Distance'],other:['अन्य','Other']};
 const MN=[['सुनीता देवी','Sunita Devi',['दर्ज़ी, 12 साल का अनुभव','Tailor, 12 years experience']],['रमेश यादव','Ramesh Yadav',['इलेक्ट्रीशियन, अपनी दुकान','Electrician, owns a shop']],['डॉ. अंजलि','Dr. Anjali',['नर्सिंग शिक्षिका','Nursing teacher']]];
 const lv=()=>({9:0,d:0,11:1,g:2})[S.p.cls]||0;
 const cur=()=>C.find(c=>c.id===S.c);
@@ -157,14 +178,41 @@ function toast(m){const e=$('#toast');e.textContent=m;e.style.display='block';cl
 const spk=(txt,l)=>`<button class="b g sm" data-a="say" data-v="${txt}" aria-label="${T(['सुनो','Listen'])}">${I('spk',20)} ${l===0?'':T(['सुनो','Listen'])}</button>`;
 function qpush(t){if(navigator.onLine){toast(T(['भेज दिया गया।','Sent.']));return}S.qu.push(t);save();bar();toast(T(['सेव हो गया। नेटवर्क आते ही भेज दिया जाएगा।','Saved. It will send when you are back online.']))}
 
+function askMatches(question){
+const stop=new Set(['what','which','how','can','the','a','an','is','for','me','my','do','i','to','of','and','in','become','want','learn','job','work','career','hai','kya','ka','ki','के','का','की','है','क्या','मुझे','और','में','से','को']);
+const tokens=(question.toLowerCase().match(/[\p{L}\p{N}]+/gu)||[]).filter(x=>x.length>1&&!stop.has(x));
+const aliases={elec:'electrician solar wiring electrician बिजली इलेक्ट्रिशियन सोलर',nurse:'nurse nursing hospital नर्स अस्पताल',teach:'teacher teaching स्कूल शिक्षक',agri:'farm agriculture drone किसान खेती कृषि',tailor:'tailor sewing stitch boutique दर्ज़ी सिलाई',digi:'mobile csc digital computer मोबाइल डिजिटल कंप्यूटर',auto:'mechanic bike auto मैकेनिक',retail:'shop retail sales दुकान',beauty:'beautician salon beauty ब्यूटी पार्लर',naps:'naps apprenticeship apprentice अप्रेंटिसशिप'};
+const candidates=[
+...C.map(c=>({kind:'career',id:c.id,name:T(c.n),text:[T(c.n),...(c.s||[]).map(T),T(c.w),aliases[c.id]||'', 'salary income pay earnings monthly कमाई वेतन नौकरी career काम'].join(' '),item:c})),
+...SC.map((s,i)=>({kind:'scheme',id:String(i),name:T(s.n),text:[T(s.n),T(s.d),T(s.r),'scholarship stipend training fees योजना स्कॉलरशिप वज़ीफ़ा'].join(' '),item:s}))
+];
+const scored=candidates.map(c=>({...c,score:tokens.reduce((n,w)=>n+(c.text.toLowerCase().includes(w)?(c.name.toLowerCase().includes(w)?3:1):0),0)})).filter(c=>c.score>0).sort((a,b)=>b.score-a.score);
+return scored.filter(c=>c.score>=scored[0].score-1).slice(0,2);
+}
+function answerDisha(question){
+const matches=askMatches(question);
+if(!matches.length)return {text:T(['इस सवाल का जवाब मेरे उपलब्ध करियर और योजना डेटा में नहीं मिला। किसी करियर या योजना का नाम लिखकर फिर पूछें।','I could not find an answer in the career and scheme data available here. Try naming a career or scheme.']),matches:[]};
+const details=matches.map(m=>{
+if(m.kind==='career'){const c=m.item;return {kind:m.kind,id:m.id,name:m.name,text:T(c.n)+'. '+earn(c)+'. '+T(['ट्रेनिंग अवधि: ','Training duration: '])+yrs(c)+'. '+T(['पहला कदम: ','First step: '])+T(c.s[0])+'. '+T(c.w)}}
+const s=m.item;return {kind:m.kind,id:m.id,name:m.name,text:T(s.d)+'. '+T(['किसके लिए: ','Who it may suit: '])+T(s.r)+'. '+T(['शर्तें आधिकारिक स्रोत पर जाँचें।','Check current conditions with the official source.'])};
+});
+return {text:details.map(d=>d.text).join(' '),matches:details};
+}
+function askBox(){
+const result=S.askResult;
+return `<div class="card"><h2>${T(['दिशा से पूछो','Ask Disha'])}</h2><p class="mut">${T(['सवाल लिखो या बोलो। जवाब इस पेज के करियर और योजना डेटा से होगा।','Type or speak a question. Answers use the career and scheme data on this page.'])}</p>
+<div class="askbox"><textarea id="askQ" aria-label="${T(['अपना सवाल लिखें','Type your question'])}" placeholder="${T(['जैसे: सोलर तकनीशियन बनने के लिए क्या करूँ?','e.g. What should I do to become a solar technician?'])}">${esc(S.askQ||'')}</textarea><button class="b g sm" data-a="askmic">${I('mic',20)} ${T(['बोलो','Speak'])}</button><button class="b" data-a="ask">${T(['जवाब पाओ','Get answer'])}</button></div>
+${result?`<div class="answer" role="status"><p>${esc(result.text)}</p>${result.matches.map(m=>`<span class="tag source">${T(['स्रोत: ','Source: '])}${esc(m.name)} · ${m.kind==='career'?T(['करियर डेटा','career data']):T(['योजना डेटा','scheme data'])}</span>`).join('')}</div>`:''}</div>`;
+}
 function V_home(){said=T(['नमस्ते। आज क्या करें? अपने बारे में बताओ, अपना रास्ता देखो, मौके खोजो, या परिवार से बात करो।','Hello. What shall we do today? Tell us about you, see your path, find chances, or talk with your family.']);
 const tl=(a,i,l)=>`<button class="tile" data-a="go" data-v="${a}">${I(i,38)}<span>${T(l)}</span></button>`;
-return `<h1>${T(['नमस्ते। आज क्या करें?','Hello. What shall we do today?'])}</h1><div class="row">${spk(said)}</div><div class="tiles">${tl('disc','mic',['अपने बारे में बताओ','Tell us about you'])}${tl('path','road',['मेरा रास्ता','My path'])}${tl('chance','star',['मौके और योजनाएँ','Chances and schemes'])}${tl('fam','fam',['परिवार से बात','Talk with family'])}</div>
+return `<h1>${T(['नमस्ते। आज क्या करें?','Hello. What shall we do today?'])}</h1><div class="row">${spk(said)}</div>${askBox()}<div class="tiles">${tl('disc','mic',['अपने बारे में बताओ','Tell us about you'])}${tl('path','road',['मेरा रास्ता','My path'])}${tl('chance','star',['मौके और योजनाएँ','Chances and schemes'])}${tl('fam','fam',['परिवार से बात','Talk with family'])}${tl('opps','star',['नौकरी और इंटर्नशिप','Jobs and internships'])}${tl('mods','book',['सीखने के मॉड्यूल','Learning modules'])}</div>
 <div class="card"><div id="fx"></div><button class="b g sm" data-a="fpause">${FP?T(['तथ्य चलाओ','Resume facts']):T(['तथ्य रोको','Pause facts'])}</button></div>
 <div class="row"><button class="b g sm" data-a="go" data-v="api">${I('code',18)} ${T(['खुला कोड और API','Open source and API'])}</button><button class="b g sm" data-a="replay">${T(['परिचय फिर देखो','Replay intro'])}</button></div>`}
 function V_disc(){const q=Q[S.q];said=T(q.q);const sel=o=>q.m?S.p.likes.includes(o.v):S.p[q.id]===o.v;
 return `<div class="dots" aria-hidden="true">${Q.map((_,i)=>`<i class="${i<=S.q?'on':''}"></i>`).join('')}</div>${S.who?`<p class="mut">${T(['छात्र:','Student:'])} <b>${S.who}</b></p>`:''}<h1>${T(q.q)}</h1>
 <div class="row">${spk(said)}<button class="b g sm" data-a="mic">${I('mic',20)} ${T(['बोलकर बताओ','Speak'])}</button></div>
+<div class="card"><label for="profileText">${T(['या अपना जवाब लिखो','Or type your answer'])}</label><div class="askbox"><input id="profileText" autocomplete="off" placeholder="${T(['जैसे: मुझे चीज़ें ठीक करना पसंद है','e.g. I enjoy fixing things'])}"><button class="b sm" data-a="typed">${T(['जोड़ो','Use answer'])}</button></div></div>
 <div class="opts">${q.o.map(o=>`<button class="opt" aria-pressed="${sel(o)}" data-a="pick" data-v="${o.v}">${o.i?I(o.i,40):''}<span>${T(o.l)}</span></button>`).join('')}</div>
 <div class="row">${S.q>0?`<button class="b g" data-a="back">${T(['पीछे','Back'])}</button>`:''}${q.m?`<button class="b" data-a="next">${T(['आगे','Next'])}</button>`:''}</div>`}
 function V_res(){const r=rank();said=T(['ये रास्ते तुम्हारे लिए ठीक हैं: ','These paths suit you: '])+r.map(c=>T(c.n)).join(', ');
@@ -172,8 +220,9 @@ return `<h1>${T(['तुम्हारे लिए रास्ते','Paths 
 function V_path(){const c=cur();if(!c)return noProf();said=T(c.n)+'. '+c.s.map((s,i)=>(i+1)+'. '+T(s)).join('. ');
 const rest=C.filter(x=>x.id!==c.id);
 return `<h1>${T(c.n)}</h1><p>${earn(c)}</p><div class="row">${spk(said)}</div><ol class="road">${c.s.map((s,i)=>`<li data-n="${i+1}">${T(s)}</li>`).join('')}</ol>
+<div class="card"><h2>${T(['सत्यापित परिणाम','Verified outcomes'])}</h2><span class="tag no">${T(['सत्यापन लंबित','Verification pending'])}</span><div class="metrics"><div class="metric">${T(['प्लेसमेंट','Placement'])}<b>—</b></div><div class="metric">${T(['आय / माह','Income / month'])}<b>—</b></div><div class="metric">${T(['कोर्स छोड़ना','Dropout'])}<b>—</b></div></div><p class="mut">${T(['इस करियर के लिए सत्यापित प्रशिक्षण-बैच डेटा अभी जुड़ा नहीं है। कोई अनुमानित आँकड़ा प्रकाशित नहीं किया गया।','Verified cohort data is not connected for this career yet. No estimated figures are presented as verified.'])}</p></div>
 <div class="row"><button class="b" data-a="go" data-v="chance">${T(['योजनाएँ देखो','See schemes'])}</button><button class="b g" data-a="go" data-v="fam">${T(['परिवार को बताओ','Tell family'])}</button></div>
-<h3>${T(['और रास्ते भी देखो','See other paths too'])}</h3><div class="row">${rest.map(x=>`<button class="b g sm" data-a="career" data-v="${x.id}">${T(x.n)}</button>`).join('')}</div>`}
+<h3>${T(['और रास्ते भी देखो','See other paths too'])}</h3><div class="row">${rest.map(x=>`<button class="b g sm" data-a="career" data-v="${x.id}">${T(x.n)}</button>`).join('')}</div><button class="b g sm" data-a="go" data-v="mods">${T(['इस करियर के मॉड्यूल','Modules for this career'])}</button>`}
 const noProf=()=>`<h1>${T(['पहले अपने बारे में बताओ','First, tell us about you'])}</h1><button class="b" data-a="start">${T(['शुरू करो','Start'])}</button>`;
 function V_chance(){if(!S.p.cls)return noProf();const l=lv();said=T(['ये योजनाएँ तुम्हारे लिए हो सकती हैं।','These schemes may be for you.']);
 return `<h1>${T(['तुम्हारे लिए मौके','Chances for you'])}</h1><div class="row">${spk(said)}</div>`+SC.map((s,i)=>{const ok=s.t(S.p,l);return `<div class="card"><h3>${T(s.n)}</h3><span class="tag ${ok?'ok':'no'}">${ok?T(['संभव है','Likely eligible']):T(['अभी नहीं','Not yet'])}</span><p>${T(s.d)}<br><span class="mut">${T(s.r)}</span></p>${ok?`<div class="row"><button class="b sm" data-a="apply" data-v="${i}">${T(['आवेदन की तैयारी','Prepare application'])}</button><button class="b g sm" data-a="help" data-v="${i}">${T(['इंसान से मदद','Ask a person'])}</button></div>`:''}</div>`}).join('')+
@@ -186,17 +235,30 @@ return `<h1>${T(['परिवार के लिए संदेश','A messag
 <h2>${T(['तुम्हारे जैसे परिवार','Families like yours'])}</h2><p class="mut">${T(['नमूना समूह','Sample groups'])}</p>
 ${[['किसान परिवार, पंजाब','Farming families, Punjab'],['पहली पीढ़ी पढ़ने वाले','First-generation learners']].map((g,i)=>`<div class="card"><h3>${T(g)}</h3><button class="b g sm" data-a="join" data-v="${i}">${T(['समूह से जुड़ो','Join group'])}</button></div>`).join('')}
 <button class="b" data-a="help" data-v="-1">${T(['अब आगे बढ़ना है: इंसान से मिलो','Ready to go ahead: meet a person'])}</button>`}
+function V_ask(){said=T(['दिशा से पूछो','Ask Disha']);return `<h1>${T(['दिशा से पूछो','Ask Disha'])}</h1>${askBox()}<p class="mut">${T(['जवाब करियर और योजनाओं के इस डेमो डेटासेट पर आधारित हैं, बाहरी AI सेवा पर नहीं।','Answers are grounded in this demo career and scheme dataset, not an external AI service.'])}</p>`}
+function V_opps(){said=T(['नौकरी और इंटर्नशिप','Jobs and internships']);
+return `<h1>${T(['मौकों का बोर्ड','Opportunities board'])}</h1><p class="mut">${T(['नमूना लिस्टिंग: आवेदन से पहले नियोक्ता, वज़ीफ़ा और तारीख की पुष्टि करें।','Sample listings: verify the host, stipend and dates before applying.'])}</p>${OPPS.map(o=>`<div class="card"><span class="tag">${T(o.type)}</span><h3>${T(o.title)}</h3><p>${T(o.org)}<br>${T(o.place)}</p><p>${T(o.detail)}</p><button class="b sm" data-a="opportunity" data-v="${o.id}">${T(['रुचि दर्ज करें','Register interest'])}</button></div>`).join('')}
+<div class="card"><h2>${T(['साझेदार बनें','Join as a partner'])}</h2><p class="mut">${T(['मेंटर, नियोक्ता या NGO के लिए छोटा परिचय फ़ॉर्म। अभी जानकारी इसी डिवाइस पर सहेजी जाएगी।','Short introduction form for mentors, employers or NGOs. Details are saved on this device only.'])}</p><label for="partnerRole">${T(['आपकी भूमिका','Your role'])}</label><select id="partnerRole"><option value="mentor">${T(['मेंटर','Mentor'])}</option><option value="employer">${T(['नियोक्ता','Employer'])}</option><option value="ngo">NGO</option></select><label for="partnerName">${T(['नाम','Name'])}</label><input id="partnerName" autocomplete="name"><label for="partnerOrg">${T(['संस्था / कार्यस्थल','Organisation / workplace'])}</label><input id="partnerOrg" autocomplete="organization"><label for="partnerContact">${T(['फ़ोन या ईमेल','Phone or email'])}</label><input id="partnerContact" autocomplete="email"><label for="partnerState">${T(['राज्य','State'])}</label><select id="partnerState">${STATES.map(s=>`<option>${s}</option>`).join('')}</select><button class="b" data-a="partnerSubmit">${T(['परिचय सहेजें','Save introduction'])}</button></div>
+${S.partners.length?`<div class="card"><h3>${T(['इस डिवाइस पर सहेजे गए परिचय','Introductions saved on this device'])}</h3>${S.partners.map(p=>`<p>${esc(p.name)} · ${esc(p.org)} · ${esc(p.role)}</p>`).join('')}</div>`:''}
+${S.opportunityInterests.length?`<p class="mut">${S.opportunityInterests.length} ${T(['रुचि अनुरोध इस डिवाइस पर सहेजे गए।','interest request(s) saved on this device.'])}</p>`:''}`}
 function V_cls(){const n=S.st.length,f=S.st.filter(x=>x.f).length;said=T(['शिक्षक पेज','Teacher page']);
 return `<h1>${T(['मेरी कक्षा','My class'])}</h1><p>${n} ${T(['छात्र','students'])}, ${f} ${T(['चिह्नित प्रतिभा','talent flagged'])}</p>
-<div class="card"><label for="nm">${T(['नए छात्र का नाम','New student name'])}</label><input id="nm" autocomplete="off"><button class="b" data-a="addst">${T(['इस छात्र की प्रोफ़ाइल बनाओ','Build this student’s profile'])}</button></div>
-<div class="scroll"><table><tr><th>${T(['नाम','Name'])}</th><th>${T(['रास्ता','Path'])}</th><th></th></tr>${S.st.map((s,i)=>{const c=C.find(x=>x.id===s.c);return `<tr><td>${s.n}</td><td>${T(c.n)}</td><td><button class="b g sm" data-a="flag" data-v="${i}" aria-pressed="${!!s.f}">${I('star',16)}${s.f?'':''}</button> <button class="b sm" data-a="rec" data-v="${i}">${s.r?'✓':T(['सिफ़ारिश','Recommend'])}</button></td></tr>`}).join('')}</table></div>`}
-function V_mods(){said=T(['अपना ट्रेनिंग मॉड्यूल बनाओ','Build your own training module']);
-return `<h1>${T(['मेरे मॉड्यूल','My modules'])}</h1><div class="card"><label for="mt">${T(['मॉड्यूल का नाम','Module title'])}</label><input id="mt"><label for="mk">${T(['कैसे दोगे?','How will you offer it?'])}</label><select id="mk"><option value="f">${T(['मुफ़्त','Free'])}</option><option value="m">${T(['प्रति मॉड्यूल भुगतान','Pay per module'])}</option><option value="s">${T(['मासिक सदस्यता','Monthly subscription'])}</option></select><label for="mp">${T(['कीमत (₹)','Price (₹)'])}</label><input id="mp" type="number" min="0" value="0"><button class="b" data-a="addmod">${T(['मॉड्यूल जोड़ो','Add module'])}</button></div>
-${S.mods.map(m=>`<div class="card"><h3>${m.t}</h3><span class="tag">${m.k==='f'?T(['मुफ़्त','Free']):m.k==='m'?T(['प्रति मॉड्यूल','Per module'])+' ₹'+m.p:T(['सदस्यता','Subscription'])+' ₹'+m.p+T(['/माह','/mo'])}</span></div>`).join('')||`<p class="mut">${T(['अभी कोई मॉड्यूल नहीं।','No modules yet.'])}</p>`}
-<p class="mut">${T(['प्लेटफ़ॉर्म शुल्क: भुगतान वाले मॉड्यूल पर 10% (नमूना)।','Platform fee: 10% on paid modules (sample).'])}</p>`}
+<div class="card"><label for="nm">${T(['नए छात्र का नाम','New student name'])}</label><input id="nm" autocomplete="off"><label for="studentState">${T(['राज्य','State'])}</label><select id="studentState"><option value="">${T(['राज्य चुनें','Choose a state'])}</option>${STATES.map(s=>`<option>${s}</option>`).join('')}</select><label for="studentResistance">${T(['परिवार की मुख्य चिंता','Main family concern'])}</label><select id="studentResistance"><option value="">${T(['चिंता चुनें','Choose a concern'])}</option>${Object.entries(RESISTANCE).map(([k,v])=>`<option value="${k}">${T(v)}</option>`).join('')}</select><button class="b" data-a="addst">${T(['इस छात्र की प्रोफ़ाइल बनाओ','Build this student’s profile'])}</button></div>
+<div class="scroll"><table><tr><th>${T(['नाम','Name'])}</th><th>${T(['राज्य','State'])}</th><th>${T(['रास्ता','Path'])}</th><th></th></tr>${S.st.map((s,i)=>{const c=C.find(x=>x.id===s.c);return `<tr><td>${esc(s.n)}</td><td>${esc(s.state||'—')}</td><td>${T(c.n)}</td><td><button class="b g sm" data-a="flag" data-v="${i}" aria-pressed="${!!s.f}">${I('star',16)}${s.f?'':''}</button> <button class="b sm" data-a="rec" data-v="${i}">${s.r?'✓':T(['सिफ़ारिश','Recommend'])}</button></td></tr>`}).join('')}</table></div>`}
+function modules(){return [...COURSES,...(S.mods||[]).map((m,i)=>({id:m.id||`created-${i}`,title:[m.t,m.t],career:m.career||'elec',price:m.k==='f'?0:+m.p||0,content:[m.content||'',m.content||'']}))]}
+function V_mods(){said=T(['सीखने के मॉड्यूल','Learning modules']);
+const all=modules(),open=all.find(m=>m.id===S.openModule);
+return `<h1>${T(['सीखने के मॉड्यूल','Learning modules'])}</h1><p class="mut">${T(['छात्र मॉड्यूल खोल सकते हैं। भुगतान वाला पाठ डेमो अनलॉक दिखाता है; कोई असली भुगतान नहीं लिया जाता।','Students can open modules. Paid lessons use a demo unlock; no real payment is collected.'])}</p>
+${S.mode==='T'?`<div class="card"><h2>${T(['नया मॉड्यूल बनाओ','Create a module'])}</h2><label for="mt">${T(['मॉड्यूल का नाम','Module title'])}</label><input id="mt"><label for="mc">${T(['पाठ सामग्री','Lesson content'])}</label><textarea id="mc" rows="4"></textarea><label for="mk">${T(['कैसे दोगे?','How will you offer it?'])}</label><select id="mk"><option value="f">${T(['मुफ़्त','Free'])}</option><option value="m">${T(['प्रति मॉड्यूल भुगतान','Pay per module'])}</option><option value="s">${T(['मासिक सदस्यता','Monthly subscription'])}</option></select><label for="mp">${T(['कीमत (₹)','Price (₹)'])}</label><input id="mp" type="number" min="0" value="0"><button class="b" data-a="addmod">${T(['मॉड्यूल जोड़ो','Add module'])}</button></div>`:''}
+${open&&(!open.price||(S.paidModules||[]).includes(open.id))?`<div class="card"><h2>${esc(T(open.title))}</h2><div class="content">${esc(T(open.content))}</div><button class="b g sm" data-a="closemod">${T(['बंद करें','Close'])}</button></div>`:''}
+${all.map(m=>{const c=C.find(x=>x.id===m.career);const paid=!!m.price;const unlocked=!paid||(S.paidModules||[]).includes(m.id);return `<div class="card"><h3>${esc(T(m.title))}</h3><p class="mut">${c?T(c.n):''}</p><span class="tag">${paid?'₹'+m.price:T(['मुफ़्त','Free'])}</span><div class="row"><button class="b sm" data-a="openmod" data-v="${esc(m.id)}">${unlocked?T(['मॉड्यूल खोलो','Open module']):T(['भुगतान और खोलें','Review payment'])}</button></div></div>`}).join('')}
+<p class="mut">${T(['डेमो भुगतान पर कोई राशि नहीं कटेगी। लाइव भुगतान के लिए सुरक्षित भुगतान सेवा जोड़नी होगी।','Demo payment does not charge money. A secure payment provider must be connected for live payments.'])}</p>`}
+function V_pay(){const m=modules().find(x=>x.id===S.payTarget);if(!m){S.v='mods';return V_mods()}said=T(['डेमो भुगतान','Demo payment']);return `<h1>${T(['मॉड्यूल अनलॉक करें','Unlock module'])}</h1><div class="card"><h3>${esc(T(m.title))}</h3><p>${T(['डेमो कीमत','Demo price'])}: ₹${m.price}</p><p class="mut">${T(['यह केवल भुगतान का नमूना चरण है; कोई पैसा नहीं लिया जाएगा।','This is a sample payment step only; no money will be charged.'])}</p><button class="b" data-a="payconfirm">${T(['डेमो में अनलॉक करें','Unlock in demo'])}</button> <button class="b g" data-a="go" data-v="mods">${T(['वापस','Back'])}</button></div>`}
+function V_mission(){said=T(['राज्य मिशन डैशबोर्ड','State mission dashboard']);const records=S.st.filter(s=>s.state===S.missionState&&s.resistance);const counts=Object.keys(RESISTANCE).map(k=>({key:k,n:records.filter(s=>s.resistance===k).length}));const max=Math.max(1,...counts.map(x=>x.n));
+return `<h1>${T(['राज्य मिशन डैशबोर्ड','State mission dashboard'])}</h1><label for="missionState">${T(['राज्य','State'])}</label><select id="missionState">${STATES.map(s=>`<option ${s===S.missionState?'selected':''}>${s}</option>`).join('')}</select><div class="card"><h2>${esc(S.missionState)} · ${T(['माता-पिता की चिंताएँ','Parent concerns'])}</h2><p>${records.length} ${T(['प्रोफ़ाइलों में दर्ज','profiles recorded'])}</p>${counts.map(x=>`<p>${T(RESISTANCE[x.key])} · ${x.n}</p><div class="progress" aria-label="${esc(T(RESISTANCE[x.key]))}: ${x.n}"><i style="width:${x.n/max*100}%"></i></div>`).join('')}<p class="mut">${T(['यह कक्षा के नमूना/स्थानीय रिकॉर्ड का सार है, राज्यव्यापी सर्वेक्षण नहीं। नए रिकॉर्ड जोड़ने पर बदलता है।','This summarizes sample/local class records, not a statewide survey. It changes as records are added.'])}</p></div>`}
 function V_api(){said='';const j={student_id:'stu_001',language:S.L?'en':'hi',profile:S.p,top_paths:S.p.cls?rank().map(c=>c.id):[],pending_sync:S.qu.length};
 return `<h1>${T(['खुला कोड, खुला API','Open source, open API'])}</h1><p>${T(['नई भाषा, नए काम, नए मेंटर: सब डेटा फ़ाइलों से जुड़ते हैं। कॉलेज, NGO और सरकारी सिस्टम API से जुड़ सकते हैं।','New languages, careers and mentors are added as data files. Colleges, NGOs and government systems connect through the API.'])}</p><pre>GET  /api/v1/profiles/{id}\nPOST /api/v1/profiles\nGET  /api/v1/paths?profile={id}\nGET  /api/v1/schemes?eligible_for={id}\nPOST /api/v1/referrals\nPOST /api/v1/sync   (offline queue)</pre><h3>${T(['इस फ़ोन की प्रोफ़ाइल','This phone’s profile'])}</h3><pre>${JSON.stringify(j,null,1).replace(/</g,'&lt;')}</pre>`}
-const VS={home:V_home,disc:V_disc,res:V_res,path:V_path,chance:V_chance,fam:V_fam,cls:V_cls,mods:V_mods,api:V_api};
+const VS={home:V_home,ask:V_ask,opps:V_opps,disc:V_disc,res:V_res,path:V_path,chance:V_chance,fam:V_fam,cls:V_cls,mods:V_mods,pay:V_pay,mission:V_mission,api:V_api};
 const FA=[[['भारत के सिर्फ़ 4.2% कामगारों के पास औपचारिक व्यावसायिक प्रशिक्षण है।','Only 4.2% of India’s workforce has formal vocational training.'],['PLFS 2025 (द्वितीयक सारांश)','PLFS 2025 (secondary summary)']],
 [['गाँवों में 14 से 18 साल के सिर्फ़ 5.6% बच्चे कोई हुनर वाला कोर्स करते हैं।','In rural India, only 5.6% of 14 to 18 year olds take a vocational course.'],['ASER 2023','ASER 2023']],
 [['गाँव के 60% से ज़्यादा 14–18 साल के बच्चे डिग्री या उससे आगे पढ़ना चाहते हैं।','Over 60% of rural 14 to 18 year olds hope to study to degree level or higher.'],['ASER 2023','ASER 2023']],
@@ -222,16 +284,30 @@ if(S.started===0){$('#intro').innerHTML=`<div class="logo">Disha<i>.</i></div><p
 if(S.started===1){renderOb();return}
 $('#hd').innerHTML=`<div class="logo">Disha<i>.</i></div><button class="hb" data-a="mute" aria-pressed="${S.mute}">${I('spk',18)} ${S.mute?T(['बंद','Off']):T(['चालू','On'])}</button><button class="hb" data-a="tl">${S.L?'हिन्दी':'English'}</button><button class="hb" data-a="mode">${I(S.mode==='S'?'cap':'home',18)} ${S.mode==='S'?T(['शिक्षक','Teacher']):T(['छात्र','Student'])}</button>`;
 bar();
-const tabs=S.mode==='S'?[['home','home',['घर','Home']],['disc','mic',['बताओ','Tell']],['path','road',['रास्ता','Path']],['chance','star',['मौके','Chances']],['fam','fam',['परिवार','Family']]]:[['cls','cap',['कक्षा','Class']],['mods','book',['मॉड्यूल','Modules']],['api','code',['API','API']]];
-if(S.mode==='S'&&!VS[S.v]||(S.mode==='S'&&['cls','mods'].includes(S.v))||(S.mode==='T'&&['home','disc','res','path','chance','fam'].includes(S.v)&&!(S.v==='disc'&&S.who)&&!(S.v==='res')))S.v=S.mode==='S'?'home':'cls';
-const act=S.v==='res'?'path':S.v;
+const tabs=S.mode==='S'?[['home','home',['घर','Home']],['ask','chat',['पूछो','Ask']],['opps','star',['मौके','Jobs']],['disc','mic',['बताओ','Profile']],['path','road',['रास्ता','Path']],['chance','star',['योजनाएँ','Schemes']],['fam','fam',['परिवार','Family']],['mods','book',['मॉड्यूल','Modules']]]:[['cls','cap',['कक्षा','Class']],['mission','fam',['मिशन','Mission']],['opps','star',['मौके','Jobs']],['mods','book',['मॉड्यूल','Modules']],['api','code',['API','API']]];
+const allowed=S.mode==='S'?['home','ask','opps','disc','res','path','chance','fam','mods','pay']:['cls','mission','opps','mods','api'];
+if(!allowed.includes(S.v))S.v=S.mode==='S'?'home':'cls';
+const act=S.v==='res'?'path':S.v==='pay'?'mods':S.v;
 $('#nv').innerHTML=tabs.map(t=>`<button data-a="go" data-v="${t[0]}" ${t[0]===act||(t[0]==='disc'&&S.v==='res'&&0)?'aria-current="page"':''}>${I(t[1],24)}${T(t[2])}</button>`).join('');
 $('#app').innerHTML=VS[S.v]();save();window.scrollTo(0,0);showFact();facts();
 }
 function pick(v){const q=Q[S.q];if(q.m){const a=S.p.likes,i=a.indexOf(v);i<0?a.push(v):a.splice(i,1);render();return}S.p[q.id]=v;next()}
-function next(){if(Q[S.q].m&&!S.p.likes.length)return toast(T(['कम से कम एक चुनो','Pick at least one']));S.q++;if(S.q>=Q.length){S.c=rank()[0].id;if(S.who){S.st.push({n:S.who,c:S.c,f:0,r:0});S.who=null;S.v='cls'}else S.v='res'}render();say(S.v==='disc'?T(Q[S.q].q):said)}
+function next(){if(Q[S.q].m&&!S.p.likes.length)return toast(T(['कम से कम एक चुनो','Pick at least one']));S.q++;if(S.q>=Q.length){S.c=rank()[0].id;if(S.who){S.st.push({n:S.who,c:S.c,f:0,r:0,state:S.pendingState,resistance:S.pendingResistance});S.who=null;S.pendingState='';S.pendingResistance='';S.v='cls'}else S.v='res'}render();if(S.v==='disc')say(T(Q[S.q].q));else if(S.v==='res')say(said)}
+function selectProfileText(value){
+const q=Q[S.q],text=value.toLowerCase(),tokens=text.match(/[\p{L}\p{N}]+/gu)||[];
+const extras={likes:{fix:'repair mechanic fix electrician चीज़ें ठीक',grow:'farm plants animal खेती पौधे',make:'sew sewing draw stitch सिलाई',talk:'sell shop sales बेच',care:'teach help care सेवा पढ़ाना',num:'computer math number हिसाब कंप्यूटर'},cls:{'9':'class 9 10 ninth tenth दसवीं','11':'class 11 12 eleventh twelfth बारहवीं',g:'college graduate स्नातक',d:'dropout left school छोड़'},cat:{gen:'general सामान्य',obc:'obc',sc:'sc',st:'st'},inc:{lo:'under 2.5 lakh less than 2.5 कम',mid:'2.5 5 lakh 8 lakh मध्यम',hi:'above 8 lakh ज़्यादा'},girl:{g:'woman female लड़की',b:'man male लड़का'},move:{y:'yes हाँ जा सकता can move',n:'no नहीं गाँव village stay'}};
+const ranked=q.o.map(o=>{const terms=(o.k+' '+T(o.l)+' '+(extras[q.id]?.[o.v]||'')).toLowerCase().match(/[\p{L}\p{N}]+/gu)||[];let score=0;for(const term of terms)if(term.length>1&&(text.includes(term)||tokens.includes(term)))score+=term.length>3?2:1;
+if(q.id==='inc'){const match=text.match(/\b(\d+(?:\.\d+)?)\s*(lakh|lac|लाख)\b/);if(match){const amount=Number(match[1]);if(o.v==='lo'&&amount<2.5||o.v==='mid'&&amount>=2.5&&amount<=8||o.v==='hi'&&amount>8)score+=5}}
+return {o,score}}).filter(x=>x.score>0).sort((a,b)=>b.score-a.score);
+if(!ranked.length)return toast(T(['समझ नहीं आया। नीचे दिए विकल्प चुनें या अलग शब्दों में लिखें।','I could not match that. Choose an option below or try different words.']));
+if(q.m)ranked.forEach(({o})=>{if(!S.p.likes.includes(o.v))S.p.likes.push(o.v)});else S.p[q.id]=ranked[0].o.v;
+if(q.m)render();else next();
+}
+function typeProfile(){const el=$('#profileText');if(el)selectProfileText(el.value.trim())}
 function mic(){const R=window.SpeechRecognition||window.webkitSpeechRecognition;if(!R)return toast(T(['इस फ़ोन पर बोलना नहीं चलता, छूकर चुनो','Voice input is not available here, please tap']));
-const r=new R(),q=Q[S.q];r.lang=S.L?'en-IN':'hi-IN';r.onresult=e=>{const x=e.results[0][0].transcript.toLowerCase();const m=q.o.filter(o=>o.k.toLowerCase().split(' ').some(w=>w&&x.includes(w)));if(!m.length)return toast(T(['समझ नहीं आया, छूकर चुनो','Did not catch that, please tap']));q.m?m.forEach(o=>{if(!S.p.likes.includes(o.v))S.p.likes.push(o.v)})||render():pick(m[0].v);if(q.m)render()};r.onerror=()=>toast(T(['माइक नहीं चला, छूकर चुनो','Mic did not work, please tap']));try{r.start();toast(T(['सुन रहा हूँ…','Listening…']))}catch(e){}}
+const r=new R();r.lang=S.L?'en-IN':'hi-IN';r.onresult=e=>selectProfileText(e.results[0][0].transcript);r.onerror=()=>toast(T(['माइक नहीं चला, छूकर चुनो','Mic did not work, please tap']));try{r.start();toast(T(['सुन रहा हूँ…','Listening…']))}catch(e){toast(T(['माइक शुरू नहीं हुआ। नीचे लिखो या विकल्प चुनो।','The microphone could not start. Type below or choose an option.']))}}
+function askMic(){const R=window.SpeechRecognition||window.webkitSpeechRecognition;if(!R)return toast(T(['इस फ़ोन पर बोलना नहीं चलता, सवाल लिखें।','Voice input is not available here; type your question.']));
+const r=new R();r.lang=S.L?'en-IN':'hi-IN';r.onresult=e=>{S.askQ=e.results[0][0].transcript;S.askResult=answerDisha(S.askQ);render()};r.onerror=()=>toast(T(['माइक नहीं चला, सवाल लिखें।','Microphone failed; type your question.']));try{r.start();toast(T(['सुन रहा हूँ…','Listening…']))}catch(e){toast(T(['माइक शुरू नहीं हुआ। सवाल लिखें।','The microphone could not start. Type your question.']))}}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a,v=b.dataset.v;
 if(a==='lang'){S.L=+v;S.started=1;S.ob=0;render()}else if(a==='obnext'){S.ob++;if(S.ob>2){S.started=2;S.v='home';render();say(T(['नमस्ते, मैं दिशा हूँ।','Hello, I am Disha.']))}else render()}else if(a==='obskip'){S.started=2;S.v='home';render()}else if(a==='replay'){S.started=1;S.ob=0;render()}else if(a==='fpause'){FP=!FP;b.textContent=FP?T(['तथ्य चलाओ','Resume facts']):T(['तथ्य रोको','Pause facts']);showFact();facts()}
 else if(a==='tl'){S.L=1-S.L;render()}
@@ -241,17 +317,26 @@ else if(a==='go'){S.v=v;if(v==='disc'){S.q=0;S.p={likes:[]};S.who=null}render();
 else if(a==='start'){S.v='disc';S.q=0;S.p={likes:[]};render();say(T(Q[0].q))}
 else if(a==='pick')pick(v);else if(a==='next')next();else if(a==='back'){S.q=Math.max(0,S.q-1);render()}
 else if(a==='mic')mic();else if(a==='say')say(v||said,1);
+else if(a==='typed')typeProfile()
+else if(a==='ask'){S.askQ=$('#askQ')?.value.trim()||'';if(!S.askQ)return toast(T(['पहले सवाल लिखें।','Type a question first.']));S.askResult=answerDisha(S.askQ);render()}
+else if(a==='askmic')askMic()
 else if(a==='sayc'){const c=C.find(x=>x.id===v);say(T(c.n)+'. '+earn(c),1)}
 else if(a==='career'){S.c=v;S.v='path';render();say(said)}
 else if(a==='apply'){qpush('apply:'+T(SC[+v].n))}
 else if(a==='help'){qpush('human_help:'+(+v>=0?T(SC[+v].n):cur()?cur().id:'general'));toast(T(['एक जानकार आपसे संपर्क करेगा।','An expert will contact you.']))}
 else if(a==='intro'){qpush('intro:'+MN[+v][1])}else if(a==='join'){qpush('join_group:'+v)}
 else if(a==='worry'){const c=cur();const t={pay:T(['हर महीने कमाई: ','Monthly pay: '])+earn(c),safe:T(c.w),stat:T(c.w)};$('#wa').innerHTML=`<div class="card"><p>${t[v]}</p>${spk(t[v])}</div>`;say(t[v],1)}
-else if(a==='addst'){const n=($('#nm').value||'').trim();if(!n)return toast(T(['नाम लिखो','Write a name']));S.who=n;S.v='disc';S.q=0;S.p={likes:[]};render();say(T(Q[0].q))}
+else if(a==='addst'){const n=($('#nm').value||'').trim();S.pendingState=$('#studentState')?.value||'';S.pendingResistance=$('#studentResistance')?.value||'';if(!n)return toast(T(['नाम लिखो','Write a name']));if(!S.pendingState||!S.pendingResistance)return toast(T(['राज्य और परिवार की चिंता चुनें।','Choose a state and the family’s main concern.']));S.who=n;S.v='disc';S.q=0;S.p={likes:[]};render();say(T(Q[0].q))}
 else if(a==='flag'){S.st[+v].f=S.st[+v].f?0:1;render()}
 else if(a==='rec'){S.st[+v].r=1;qpush('recommend:'+S.st[+v].n);render()}
-else if(a==='addmod'){const t=($('#mt').value||'').trim();if(!t)return toast(T(['नाम लिखो','Write a title']));S.mods.push({t,k:$('#mk').value,p:+$('#mp').value||0});qpush('module:'+t);render()}
+else if(a==='addmod'){const t=($('#mt').value||'').trim(),content=($('#mc').value||'').trim(),kind=$('#mk').value,price=Number($('#mp').value);if(!t||!content)return toast(T(['शीर्षक और पाठ सामग्री दोनों लिखें।','Enter both a title and lesson content.']));if(!Number.isFinite(price)||price<0||kind!=='f'&&price<=0)return toast(T(['कीमत सही लिखें।','Enter a valid price.']));S.mods.push({id:'created-'+Date.now(),t,k:kind,p:price,content,career:cur()?.id||'elec'});render();toast(T(['मॉड्यूल सहेजा गया।','Module saved.']))}
+else if(a==='openmod'){const m=modules().find(x=>x.id===v);if(!m)return toast(T(['मॉड्यूल नहीं मिला।','Module not found.']));if(m.price&&!(S.paidModules||[]).includes(m.id)){S.payTarget=m.id;S.v='pay'}else S.openModule=m.id;render()}
+else if(a==='closemod'){S.openModule=null;render()}
+else if(a==='payconfirm'){if(!S.paidModules.includes(S.payTarget))S.paidModules.push(S.payTarget);S.openModule=S.payTarget;S.payTarget=null;S.v='mods';render();toast(T(['डेमो अनलॉक हुआ—कोई भुगतान नहीं लिया गया।','Demo unlocked—no payment was charged.']))}
+else if(a==='opportunity'){const o=OPPS.find(x=>x.id===v);if(o&&!S.opportunityInterests.includes(v)){S.opportunityInterests.push(v);save()}toast(T(['रुचि इस डिवाइस पर सहेजी गई; सूची नमूना है, आयोजक से सीधे पुष्टि करें।','Interest saved on this device. This is a sample listing; contact the host to confirm.']))}
+else if(a==='partnerSubmit'){const name=$('#partnerName')?.value.trim()||'',org=$('#partnerOrg')?.value.trim()||'',contact=$('#partnerContact')?.value.trim()||'';if(!name||!org||!contact)return toast(T(['नाम, संस्था और संपर्क जानकारी भरें।','Enter your name, organisation and contact details.']));S.partners.push({role:$('#partnerRole').value,name,org,contact,state:$('#partnerState').value});save();render();toast(T(['परिचय इस डिवाइस पर सहेजा गया; अभी किसी संस्था को नहीं भेजा गया।','Introduction saved on this device; it has not been sent to an organisation.']))}
 });
+document.addEventListener('change',e=>{if(e.target.id==='missionState'){S.missionState=e.target.value;render()}});
 window.addEventListener('online',()=>{const n=S.qu.length;S.qu=[];save();bar();if(n)toast(n+T([' चीज़ें भेज दी गईं।',' items sent.']))});window.addEventListener('offline',bar);
 render();
 </script></body></html>
